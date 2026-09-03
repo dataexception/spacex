@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="LOOK UP helps you find upcoming rocket launches and estimate which ones may be worth watching from your location.">
+<meta name="theme-color" content="#070b14">
+<meta property="og:title" content="LOOK UP — Can I See the Launch?">
+<meta property="og:description" content="Find upcoming rocket launches and see which ones may be worth watching from where you are.">
+<title>LOOK UP — Can I See It?</title>
+<style>
+:root{--bg:#070b14;--card:#101827;--muted:#93a4bd;--text:#f4f7fb;--accent:#7dd3fc;--good:#86efac;--warn:#fcd34d;--bad:#fca5a5;--line:#243247}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(circle at 20% 0%,#17233b 0,#070b14 42%);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+header{max-width:1120px;margin:auto;padding:28px 22px;display:flex;justify-content:space-between;align-items:center}
+.logo{font-weight:900;letter-spacing:.12em}.pill{border:1px solid var(--line);padding:8px 12px;border-radius:999px;color:var(--muted);font-size:13px}
+main{max-width:1120px;margin:auto;padding:20px 22px 70px}.hero{padding:44px 0 28px;max-width:850px}
+.eyebrow{color:var(--accent);font-weight:800;letter-spacing:.12em;text-transform:uppercase;font-size:12px}
+h1{font-size:clamp(42px,7vw,78px);line-height:.95;margin:12px 0 20px;letter-spacing:-.05em}
+.hero p{font-size:20px;color:#c2cede;line-height:1.5}
+.controls{display:flex;gap:10px;flex-wrap:wrap;margin:24px 0 8px}
+button{border:0;border-radius:12px;padding:14px 18px;background:var(--accent);font-weight:900;cursor:pointer}
+button.secondary{background:#152238;color:#dbeafe;border:1px solid var(--line)}
+.grid{display:grid;grid-template-columns:1.15fr .85fr;gap:18px}
+.card{background:rgba(16,24,39,.9);border:1px solid var(--line);border-radius:20px;padding:22px}
+.date{font-size:12px;color:var(--muted);font-weight:800;letter-spacing:.08em}
+.big{font-size:30px;font-weight:900;margin:6px 0 10px}
+h2{margin:6px 0 8px}.good{color:var(--good)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+.status{min-height:68px;line-height:1.5}
+.guide{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}
+.stat{background:#0c1320;border:1px solid var(--line);border-radius:14px;padding:14px}
+.stat b{display:block;font-size:18px;margin-top:5px}
+.map{min-height:330px;border-radius:15px;background:radial-gradient(circle at 55% 45%,#314768 0 2px,transparent 3px),linear-gradient(145deg,#111c31,#07101d);position:relative;overflow:hidden}
+.compass{position:absolute;inset:28px;border:1px solid #40536e;border-radius:50%}
+.compass:before,.compass:after{content:"";position:absolute;background:#334760}
+.compass:before{left:50%;top:0;bottom:0;width:1px}.compass:after{top:50%;left:0;right:0;height:1px}
+.dir{position:absolute;font-weight:900;color:#a9bad0}.n{top:8px;left:50%;transform:translateX(-50%)}.s{bottom:8px;left:50%;transform:translateX(-50%)}.e{right:10px;top:50%;transform:translateY(-50%)}.w{left:10px;top:50%;transform:translateY(-50%)}
+.arrow{position:absolute;left:50%;top:50%;width:5px;height:105px;background:var(--accent);transform-origin:50% 100%;transform:translate(-50%,-100%) rotate(0deg);border-radius:6px}
+.arrow:before{content:"";position:absolute;top:-7px;left:-6px;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:14px solid var(--accent)}
+.maplabel{position:absolute;bottom:12px;left:14px;color:#aabbd1;font-size:12px}
+.small{font-size:12px;color:var(--muted);line-height:1.5}
+.reason{margin-top:14px;padding:14px;border:1px solid var(--line);background:#0c1320;border-radius:14px;color:#c4cfdd;line-height:1.55}
+footer{max-width:1120px;margin:auto;padding:0 22px 35px;color:#72829a;font-size:12px}
+@media(max-width:800px){.grid{grid-template-columns:1fr}.guide{grid-template-columns:1fr}.controls{flex-direction:column}button{width:100%}}
+</style>
+</head>
+<body>
+<header><div class="logo">LOOK UP</div><div class="pill">Live beta</div></header>
+<main>
+<section class="hero">
+<div class="eyebrow">Location-aware launch spotting</div>
+<h1>Can I see the launch?</h1>
+<p>Use your location. LOOK UP scans upcoming launches, ranks the best viewing candidates for you, and explains what makes each one promising—or not.</p>
+<div class="controls">
+<button onclick="useLocation()">📍 Use My Location</button>
+<button class="secondary" onclick="demoPhoenix()">Try Phoenix demo</button><button class="secondary" onclick="showCandidates()">Best upcoming sightings</button>
+</div>
+<p class="small">Your browser location stays in this page. This prototype does not upload or save it.</p>
+</section>
+
+<section class="grid">
+<div class="card">
+<div class="date">NEXT LAUNCH · LIVE DATA</div>
+<h2 id="launchName">Waiting for your location</h2>
+<div id="launchTime" class="big">—</div>
+<div id="status" class="status">Choose “Use My Location” to begin.</div>
+<hr style="border:0;border-top:1px solid var(--line);margin:22px 0">
+<div class="date">VISIBILITY ASSESSMENT</div>
+<div id="verdict" class="big">—</div>
+<div id="verdictText" class="small">No estimate yet.</div>
+<div class="guide">
+<div class="stat"><span class="date">DISTANCE</span><b id="distance">—</b></div>
+<div class="stat"><span class="date">LOOK</span><b id="bearingText">—</b></div>
+<div class="stat"><span class="date">SKY</span><b id="sky">—</b></div>
+</div>
+<div id="reason" class="reason">The estimate will explain itself here.</div>
+</div>
+
+<div class="card">
+<div class="date">DIRECTION TO LAUNCH SITE</div>
+<div class="map">
+<div class="compass"></div><div class="dir n">N</div><div class="dir s">S</div><div class="dir e">E</div><div class="dir w">W</div>
+<div id="arrow" class="arrow"></div>
+<div id="maplabel" class="maplabel">Waiting for location + launch pad coordinates</div>
+</div>
+</div>
+</section>
+<section class="card" style="margin-top:18px">
+<div class="date">BEST UPCOMING SIGHTINGS · FOR YOUR LOCATION</div>
+<h2>Launch watchlist</h2>
+<p class="small">Instead of only showing the very next launch, LOOK UP can rank upcoming launches by distance and darkness. Trajectory is not yet included, so these are candidates—not guarantees.</p>
+<div id="candidates" style="display:grid;gap:10px;margin-top:14px"><div class="reason">Use your location first, then open the watchlist.</div></div>
+</section>
+</main>
+<footer>LOOK UP is an independent prototype. Sightability rankings are coarse estimates based on distance and local solar altitude, not trajectory predictions. Rocket flight path, clouds, terrain and mission-specific ascent can change actual visibility.</footer>
+
+<script>
+const R_EARTH_KM=6371;
+
+function rad(d){return d*Math.PI/180}
+function deg(r){return r*180/Math.PI}
+function haversine(lat1,lon1,lat2,lon2){
+  const dlat=rad(lat2-lat1), dlon=rad(lon2-lon1);
+  const a=Math.sin(dlat/2)**2+Math.cos(rad(lat1))*Math.cos(rad(lat2))*Math.sin(dlon/2)**2;
+  return 2*R_EARTH_KM*Math.asin(Math.sqrt(a));
+}
+function bearing(lat1,lon1,lat2,lon2){
+  const p1=rad(lat1),p2=rad(lat2),dl=rad(lon2-lon1);
+  const y=Math.sin(dl)*Math.cos(p2);
+  const x=Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dl);
+  return (deg(Math.atan2(y,x))+360)%360;
+}
+function cardinal(b){
+  const dirs=['N','NE','E','SE','S','SW','W','NW'];
+  return dirs[Math.round(b/45)%8];
+}
+
+// Approximate solar altitude using NOAA-style solar position math.
+function solarAltitude(date,lat,lon){
+  const jd=date.getTime()/86400000+2440587.5;
+  const n=jd-2451545.0;
+  const L=(280.46+0.9856474*n)%360;
+  const g=rad((357.528+0.9856003*n)%360);
+  const lambda=rad((L+1.915*Math.sin(g)+0.020*Math.sin(2*g))%360);
+  const eps=rad(23.439-0.0000004*n);
+  const ra=Math.atan2(Math.cos(eps)*Math.sin(lambda),Math.cos(lambda));
+  const dec=Math.asin(Math.sin(eps)*Math.sin(lambda));
+  const gmst=(18.697374558+24.06570982441908*n)%24;
+  const lst=rad((gmst*15+lon)%360);
+  let H=lst-ra;
+  while(H>Math.PI)H-=2*Math.PI; while(H<-Math.PI)H+=2*Math.PI;
+  return deg(Math.asin(Math.sin(rad(lat))*Math.sin(dec)+Math.cos(rad(lat))*Math.cos(dec)*Math.cos(H)));
+}
+function skyLabel(alt){
+  if(alt>0)return 'Daylight';
+  if(alt>-6)return 'Civil twilight';
+  if(alt>-12)return 'Nautical twilight';
+  if(alt>-18)return 'Astronomical twilight';
+  return 'Dark';
+}
+function verdict(distanceKm, solarAlt){
+  let score=0;
+  if(distanceKm<200) score+=3;
+  else if(distanceKm<500) score+=2;
+  else if(distanceKm<1000) score+=1;
+  else score-=1;
+
+  if(solarAlt<-6) score+=2;
+  else if(solarAlt<0) score+=1;
+  else if(solarAlt>10) score-=2;
+
+  if(score>=4) return ['🟢 LIKELY VISIBLE','good'];
+  if(score>=1) return ['🟡 POSSIBLY VISIBLE','warn'];
+  return ['🔴 UNLIKELY FROM THIS LOCATION','bad'];
+}
+function fmtTime(iso){return new Date(iso).toLocaleString([],{dateStyle:'medium',timeStyle:'short'})}
+function esc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+
+
+let lastObserver=null;
+let lastLaunches=[];
+
+function candidateScore(km,sunAlt){
+  let s=0;
+  if(km<150)s+=5; else if(km<350)s+=4; else if(km<700)s+=3; else if(km<1200)s+=1; else s-=2;
+  if(sunAlt<-12)s+=4; else if(sunAlt<-6)s+=3; else if(sunAlt<0)s+=1; else if(sunAlt>10)s-=3;
+  return s;
+}
+function scoreLabel(s){
+  if(s>=7)return ['Excellent candidate','good'];
+  if(s>=4)return ['Good candidate','good'];
+  if(s>=1)return ['Possible','warn'];
+  return ['Long shot','bad'];
+}
+function renderCandidates(){
+  const box=document.getElementById('candidates');
+  if(!lastObserver || !lastLaunches.length){
+    box.innerHTML='<div class="reason">Run a location check first.</div>'; return;
+  }
+  const ranked=lastLaunches.map(l=>{
+    const plat=Number(l.pad.latitude),plon=Number(l.pad.longitude),d=new Date(l.net);
+    const km=haversine(lastObserver.lat,lastObserver.lon,plat,plon);
+    const sa=solarAltitude(d,lastObserver.lat,lastObserver.lon);
+    return {l,km,sa,b:bearing(lastObserver.lat,lastObserver.lon,plat,plon),score:candidateScore(km,sa)};
+  }).sort((a,b)=>b.score-a.score || new Date(a.l.net)-new Date(b.l.net)).slice(0,5);
+
+  box.innerHTML=ranked.map((x,i)=>{
+    const [lab,cls]=scoreLabel(x.score);
+    return `<div class="reason" style="margin-top:0">
+      <div class="date">#${i+1} · ${fmtTime(x.l.net)}</div>
+      <div style="font-weight:900;font-size:18px;margin:5px 0">${esc(x.l.name||'Upcoming launch')}</div>
+      <span class="${cls}" style="font-weight:900">${lab}</span>
+      <span class="small"> · ${Math.round(x.km*0.621371).toLocaleString()} mi · look ${cardinal(x.b)} · ${skyLabel(x.sa)}</span>
+    </div>`;
+  }).join('');
+}
+function showCandidates(){renderCandidates();document.getElementById('candidates').scrollIntoView({behavior:'smooth',block:'center'});}
+
+function useLocation(){
+  const st=document.getElementById('status');
+  if(!navigator.geolocation){st.textContent='This browser does not provide geolocation.';return}
+  st.textContent='Requesting your location…';
+  navigator.geolocation.getCurrentPosition(
+    p=>run(p.coords.latitude,p.coords.longitude,'Your location'),
+    e=>{st.textContent='Location permission was not available. You can use the Phoenix demo instead.'},
+    {enableHighAccuracy:false,timeout:10000,maximumAge:300000}
+  );
+}
+function demoPhoenix(){run(33.4484,-112.0740,'Phoenix, AZ demo')}
+
+async function run(userLat,userLon,label){
+  const st=document.getElementById('status');
+  st.textContent=`Finding the next launch for ${label}…`;
+  try{
+    const now=Date.now();
+    const api='https://ll.thespacedevs.com/2.3.0/launches/upcoming/?format=json&limit=100&ordering=net&hide_recent_previous=true';
+    const res=await fetch(api,{cache:'no-store'});
+    if(!res.ok) throw new Error('Launch feed unavailable');
+    const data=await res.json();
+    const future=(data.results||[])
+      .filter(x=>x.net && new Date(x.net).getTime()>now && x.pad && x.pad.latitude!=null && x.pad.longitude!=null)
+      .sort((a,b)=>new Date(a.net)-new Date(b.net));
+    lastObserver={lat:userLat,lon:userLon,label};
+    lastLaunches=future.slice(0,40);
+    if(!future.length) throw new Error('No future launch with pad coordinates found');
+
+    const launch=future[0];
+    const padLat=Number(launch.pad.latitude), padLon=Number(launch.pad.longitude);
+    const launchDate=new Date(launch.net);
+    const km=haversine(userLat,userLon,padLat,padLon);
+    const miles=km*0.621371;
+    const b=bearing(userLat,userLon,padLat,padLon);
+    const sunAlt=solarAltitude(launchDate,userLat,userLon);
+    const skyTxt=skyLabel(sunAlt);
+    const [v,cls]=verdict(km,sunAlt);
+
+    document.getElementById('launchName').textContent=launch.name||'Upcoming launch';
+    document.getElementById('launchTime').textContent=fmtTime(launch.net);
+    st.innerHTML=`<span class="good">✓ Future launch confirmed</span><br><span class="small">${esc(launch.launch_service_provider?.name||'Provider TBD')} · ${esc(launch.pad?.name||launch.pad?.location?.name||'Launch site TBD')}</span>`;
+
+    const verdictEl=document.getElementById('verdict');
+    verdictEl.className=`big ${cls}`; verdictEl.textContent=v;
+    document.getElementById('verdictText').textContent='Prototype estimate based on launch-site distance and how dark your local sky should be.';
+    document.getElementById('distance').textContent=`${Math.round(miles).toLocaleString()} mi`;
+    document.getElementById('bearingText').textContent=`${cardinal(b)} · ${Math.round(b)}°`;
+    document.getElementById('sky').textContent=skyTxt;
+    document.getElementById('arrow').style.transform=`translate(-50%,-100%) rotate(${b}deg)`;
+    document.getElementById('maplabel').textContent=`Launch site is about ${Math.round(miles)} miles ${cardinal(b)} of ${label}.`;
+
+    let why=`The launch site is about ${Math.round(miles)} miles away. At launch time, the Sun is approximately ${sunAlt.toFixed(1)}° relative to your horizon, which corresponds to ${skyTxt.toLowerCase()}. `;
+    if(km<500) why+='That distance is favorable for a possible ascent sighting.';
+    else if(km<1000) why+='That is a substantial distance, so mission trajectory matters a lot.';
+    else why+='That is very far from the pad, so a sighting would generally require the ascent path to carry the vehicle toward your part of the sky.';
+    why+=' This version still does not know the exact ascent trajectory or cloud cover.';
+    document.getElementById('reason').textContent=why;
+    renderCandidates();
+
+  }catch(e){
+    st.className='status bad';
+    st.textContent='Could not retrieve a future launch with usable pad coordinates.';
+    document.getElementById('verdict').textContent='No live result';
+    document.getElementById('reason').textContent='LOOK UP did not fabricate a prediction.';
+  }
+}
+</script>
+</body>
+</html>
