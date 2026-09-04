@@ -3,11 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="LOOK UP helps you find upcoming rocket launches and estimate which ones may be worth watching from your location.">
-<meta name="theme-color" content="#070b14">
-<meta property="og:title" content="LOOK UP — Can I See the Launch?">
-<meta property="og:description" content="Find upcoming rocket launches and see which ones may be worth watching from where you are.">
-<title>LOOK UP — Can I See It?</title>
+<title>LOOK UP v0.5 — Can I See It?</title>
 <style>
 :root{--bg:#070b14;--card:#101827;--muted:#93a4bd;--text:#f4f7fb;--accent:#7dd3fc;--good:#86efac;--warn:#fcd34d;--bad:#fca5a5;--line:#243247}
 *{box-sizing:border-box}
@@ -27,7 +23,7 @@ button.secondary{background:#152238;color:#dbeafe;border:1px solid var(--line)}
 .big{font-size:30px;font-weight:900;margin:6px 0 10px}
 h2{margin:6px 0 8px}.good{color:var(--good)}.warn{color:var(--warn)}.bad{color:var(--bad)}
 .status{min-height:68px;line-height:1.5}
-.guide{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}
+.guide{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}
 .stat{background:#0c1320;border:1px solid var(--line);border-radius:14px;padding:14px}
 .stat b{display:block;font-size:18px;margin-top:5px}
 .map{min-height:330px;border-radius:15px;background:radial-gradient(circle at 55% 45%,#314768 0 2px,transparent 3px),linear-gradient(145deg,#111c31,#07101d);position:relative;overflow:hidden}
@@ -45,12 +41,12 @@ footer{max-width:1120px;margin:auto;padding:0 22px 35px;color:#72829a;font-size:
 </style>
 </head>
 <body>
-<header><div class="logo">LOOK UP</div><div class="pill">Live beta</div></header>
+<header><div class="logo">LOOK UP</div><div class="pill">Live beta · 0.5</div></header>
 <main>
 <section class="hero">
 <div class="eyebrow">Location-aware launch spotting</div>
 <h1>Can I see the launch?</h1>
-<p>Use your location. LOOK UP scans upcoming launches, ranks the best viewing candidates for you, and explains what makes each one promising—or not.</p>
+<p>Use your location. LOOK UP scans upcoming launches, checks distance, darkness and local weather, then explains which launches may be worth stepping outside for.</p>
 <div class="controls">
 <button onclick="useLocation()">📍 Use My Location</button>
 <button class="secondary" onclick="demoPhoenix()">Try Phoenix demo</button><button class="secondary" onclick="showCandidates()">Best upcoming sightings</button>
@@ -71,9 +67,13 @@ footer{max-width:1120px;margin:auto;padding:0 22px 35px;color:#72829a;font-size:
 <div class="guide">
 <div class="stat"><span class="date">DISTANCE</span><b id="distance">—</b></div>
 <div class="stat"><span class="date">LOOK</span><b id="bearingText">—</b></div>
-<div class="stat"><span class="date">SKY</span><b id="sky">—</b></div>
+<div class="stat"><span class="date">SKY</span><b id="sky">—</b></div><div class="stat"><span class="date">WEATHER</span><b id="weather">—</b></div>
 </div>
 <div id="reason" class="reason">The estimate will explain itself here.</div>
+<div id="weatherDetail" class="reason" style="margin-top:10px">
+<div class="date">VIEWING WEATHER</div>
+<div style="margin-top:6px">Weather forecast will appear when the launch is within forecast range.</div>
+</div>
 </div>
 
 <div class="card">
@@ -92,7 +92,7 @@ footer{max-width:1120px;margin:auto;padding:0 22px 35px;color:#72829a;font-size:
 <div id="candidates" style="display:grid;gap:10px;margin-top:14px"><div class="reason">Use your location first, then open the watchlist.</div></div>
 </section>
 </main>
-<footer>LOOK UP is an independent prototype. Sightability rankings are coarse estimates based on distance and local solar altitude, not trajectory predictions. Rocket flight path, clouds, terrain and mission-specific ascent can change actual visibility.</footer>
+<footer>LOOK UP is an independent prototype. Sightability rankings use distance, local solar altitude and available weather forecasts. They are not trajectory predictions. Rocket flight path, clouds, terrain and mission-specific ascent can change actual visibility.</footer>
 
 <script>
 const R_EARTH_KM=6371;
@@ -138,7 +138,7 @@ function skyLabel(alt){
   if(alt>-18)return 'Astronomical twilight';
   return 'Dark';
 }
-function verdict(distanceKm, solarAlt){
+function verdict(distanceKm, solarAlt, weatherBonus=0){
   let score=0;
   if(distanceKm<200) score+=3;
   else if(distanceKm<500) score+=2;
@@ -149,9 +149,11 @@ function verdict(distanceKm, solarAlt){
   else if(solarAlt<0) score+=1;
   else if(solarAlt>10) score-=2;
 
-  if(score>=4) return ['🟢 LIKELY VISIBLE','good'];
-  if(score>=1) return ['🟡 POSSIBLY VISIBLE','warn'];
-  return ['🔴 UNLIKELY FROM THIS LOCATION','bad'];
+  score += weatherBonus;
+
+  if(score>=5) return ['🟢 STRONG VIEWING CANDIDATE','good'];
+  if(score>=2) return ['🟡 POSSIBLE SIGHTING','warn'];
+  return ['🔴 UNLIKELY / POOR CONDITIONS','bad'];
 }
 function fmtTime(iso){return new Date(iso).toLocaleString([],{dateStyle:'medium',timeStyle:'short'})}
 function esc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
@@ -196,6 +198,50 @@ function renderCandidates(){
 }
 function showCandidates(){renderCandidates();document.getElementById('candidates').scrollIntoView({behavior:'smooth',block:'center'});}
 
+
+async function getWeatherAt(lat,lon,when){
+  const hoursAway=(when.getTime()-Date.now())/3600000;
+  if(hoursAway < -2 || hoursAway > 16*24){
+    return {available:false,reason:'Forecast not available this far ahead yet.'};
+  }
+  try{
+    const url=`https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&hourly=cloud_cover,precipitation_probability,visibility&forecast_days=16&timezone=UTC`;
+    const res=await fetch(url,{cache:'no-store'});
+    if(!res.ok) throw new Error('weather');
+    const data=await res.json();
+    const times=(data.hourly&&data.hourly.time)||[];
+    if(!times.length) throw new Error('weather');
+    const target=when.getTime();
+    let best=0,bestDiff=Infinity;
+    for(let i=0;i<times.length;i++){
+      const t=new Date(times[i]+'Z').getTime();
+      const diff=Math.abs(t-target);
+      if(diff<bestDiff){bestDiff=diff;best=i;}
+    }
+    const cloud=Number(data.hourly.cloud_cover?.[best]);
+    const rain=Number(data.hourly.precipitation_probability?.[best]);
+    const visM=Number(data.hourly.visibility?.[best]);
+    const visMi=Number.isFinite(visM)?visM/1609.344:null;
+
+    let bonus=0,label='Fair';
+    if(Number.isFinite(cloud)){
+      if(cloud<=25){bonus+=2;label='Clear-ish';}
+      else if(cloud<=55){bonus+=1;label='Mixed';}
+      else if(cloud>=85){bonus-=2;label='Cloudy';}
+      else if(cloud>=70){bonus-=1;label='Mostly cloudy';}
+    }
+    if(Number.isFinite(rain) && rain>=60) bonus-=1;
+
+    return {available:true,cloud,rain,visMi,bonus,label};
+  }catch(e){
+    return {available:false,reason:'Weather service unavailable right now.'};
+  }
+}
+function weatherSummary(w){
+  if(!w.available)return 'Forecast pending';
+  return w.label;
+}
+
 function useLocation(){
   const st=document.getElementById('status');
   if(!navigator.geolocation){st.textContent='This browser does not provide geolocation.';return}
@@ -232,7 +278,8 @@ async function run(userLat,userLon,label){
     const b=bearing(userLat,userLon,padLat,padLon);
     const sunAlt=solarAltitude(launchDate,userLat,userLon);
     const skyTxt=skyLabel(sunAlt);
-    const [v,cls]=verdict(km,sunAlt);
+    const wx=await getWeatherAt(userLat,userLon,launchDate);
+    const [v,cls]=verdict(km,sunAlt,wx.available?wx.bonus:0);
 
     document.getElementById('launchName').textContent=launch.name||'Upcoming launch';
     document.getElementById('launchTime').textContent=fmtTime(launch.net);
@@ -244,6 +291,7 @@ async function run(userLat,userLon,label){
     document.getElementById('distance').textContent=`${Math.round(miles).toLocaleString()} mi`;
     document.getElementById('bearingText').textContent=`${cardinal(b)} · ${Math.round(b)}°`;
     document.getElementById('sky').textContent=skyTxt;
+    document.getElementById('weather').textContent=weatherSummary(wx);
     document.getElementById('arrow').style.transform=`translate(-50%,-100%) rotate(${b}deg)`;
     document.getElementById('maplabel').textContent=`Launch site is about ${Math.round(miles)} miles ${cardinal(b)} of ${label}.`;
 
@@ -251,8 +299,20 @@ async function run(userLat,userLon,label){
     if(km<500) why+='That distance is favorable for a possible ascent sighting.';
     else if(km<1000) why+='That is a substantial distance, so mission trajectory matters a lot.';
     else why+='That is very far from the pad, so a sighting would generally require the ascent path to carry the vehicle toward your part of the sky.';
-    why+=' This version still does not know the exact ascent trajectory or cloud cover.';
+    if(wx.available){
+      why+=` Forecast near launch time: about ${Math.round(wx.cloud)}% cloud cover and ${Math.round(wx.rain)}% precipitation probability.`;
+    } else {
+      why+=` ${wx.reason}`;
+    }
+    why+=' This version still does not know the exact ascent trajectory.';
     document.getElementById('reason').textContent=why;
+    const wd=document.getElementById('weatherDetail');
+    if(wx.available){
+      const visTxt=Number.isFinite(wx.visMi)?`${Math.round(wx.visMi)} mi forecast visibility`:'visibility unavailable';
+      wd.innerHTML=`<div class="date">VIEWING WEATHER</div><div style="margin-top:6px"><b>${wx.label}</b> · ${Math.round(wx.cloud)}% clouds · ${Math.round(wx.rain)}% precip · ${visTxt}</div>`;
+    } else {
+      wd.innerHTML=`<div class="date">VIEWING WEATHER</div><div style="margin-top:6px">${wx.reason}</div>`;
+    }
     renderCandidates();
 
   }catch(e){
