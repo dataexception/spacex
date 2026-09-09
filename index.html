@@ -9,13 +9,17 @@ button{padding:15px 18px;border:0;border-radius:12px;font-weight:900;background:
 .card{background:#0c1426e8;border:1px solid var(--line);border-radius:20px;padding:22px;margin:16px 0}.big{font-size:28px;font-weight:900;margin:7px 0}.muted{color:var(--muted);line-height:1.5}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:16px}.stat{background:#08101f;border:1px solid var(--line);border-radius:13px;padding:13px}.stat b{display:block;margin-top:5px}
 .good{color:var(--green)}.warn{color:var(--yellow)}.bad{color:var(--red)}.watch{display:grid;gap:9px}.item{background:#08101f;border:1px solid var(--line);border-radius:13px;padding:14px}
 footer{font-size:12px;color:#738198;line-height:1.5}@media(max-width:700px){.stats{grid-template-columns:1fr 1fr}}
-</style></head><body><header><div>LOOK UP</div><div class="beta">PUBLIC BETA · 0.7</div></header><main>
+</style></head><body><header><div>LOOK UP</div><div class="beta">PUBLIC BETA · 0.8</div></header><main>
 <section class="hero"><div class="eyebrow">LOCATION-AWARE LAUNCH SPOTTING</div><h1>What's worth looking up for?</h1>
 <p>LOOK UP scans upcoming rocket launches and ranks the ones that may actually be worth watching from where you are—instead of simply showing the next rocket leaving Earth.</p>
-<button onclick="useLocation()">📍 Use My Location</button><button class="secondary" onclick="run(33.4484,-112.074,'Phoenix demo')">Try Phoenix demo</button>
+<button onclick="useLocation()">📍 Use My Location</button><button class="secondary" onclick="run(33.4484,-112.074,'Phoenix demo')">Try Phoenix demo</button><button class="secondary" onclick="shareSite()">Share LOOK UP</button>
 <p class="muted" style="font-size:12px">Your browser location stays on this page. LOOK UP does not save it.</p></section>
 <section class="card"><div class="label">NEXT LAUNCH WORTH WATCHING</div><div id="name" class="big">Waiting for your location</div><div id="time" class="muted">—</div>
 <div id="verdict" class="big">—</div><div id="why" class="muted">Use your location to rank upcoming launches.</div>
+<div class="item" style="margin-top:14px">
+<b>Beta confidence</b>
+<div class="muted">Candidate ranking currently uses launch-site distance and local sky conditions. A candidate is <b>not</b> a confirmed sighting until mission-specific trajectory data can support it.</div>
+</div>
 <div class="stats"><div class="stat"><span class="label">DISTANCE</span><b id="distance">—</b></div><div class="stat"><span class="label">LOOK</span><b id="look">—</b></div><div class="stat"><span class="label">SKY</span><b id="sky">—</b></div><div class="stat"><span class="label">WEATHER</span><b id="weather">—</b></div></div></section>
 
 <section class="card">
@@ -25,8 +29,16 @@ footer{font-size:12px;color:#738198;line-height:1.5}@media(max-width:700px){.sta
 <div id="nextChronNote" class="muted">This shows the next launch even if LOOK UP cannot score it yet.</div>
 </section>
 <section class="card"><div class="label">YOUR LAUNCH WATCHLIST</div><h2>Best upcoming candidates</h2><div id="watch" class="watch"><div class="item muted">Run a location check first.</div></div></section>
-</main><footer>LOOK UP public beta. Viewing estimates are experimental, not official launch forecasts. Direction currently points toward the launch site, not a verified rocket flight path. Always check official launch information before making travel plans.</footer>
+</main><footer>LOOK UP public beta. Candidate rankings are experimental and do not confirm that a rocket will be visible. Direction currently points toward the launch site, not a verified rocket flight path. Always check official launch information before making travel plans.</footer>
 <script>
+async function shareSite(){
+ const data={title:'LOOK UP',text:'Find rocket launches that may be worth watching from your location.',url:location.href};
+ try{
+   if(navigator.share){await navigator.share(data);}
+   else{await navigator.clipboard.writeText(location.href);alert('LOOK UP link copied.');}
+ }catch(e){}
+}
+
 const R=6371,rad=x=>x*Math.PI/180,deg=x=>x*180/Math.PI;
 function dist(a,b,c,d){let x=rad(c-a),y=rad(d-b),q=Math.sin(x/2)**2+Math.cos(rad(a))*Math.cos(rad(c))*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(q))}
 function bear(a,b,c,d){let p=rad(a),q=rad(c),x=rad(d-b),y=Math.sin(x)*Math.cos(q),z=Math.cos(p)*Math.sin(q)-Math.sin(p)*Math.cos(q)*Math.cos(x);return(deg(Math.atan2(y,z))+360)%360}
@@ -50,9 +62,13 @@ if(chron){
 let f=allFuture.filter(x=>x.pad?.latitude!=null&&x.pad?.longitude!=null).map(x=>{let k=dist(lat,lon,+x.pad.latitude,+x.pad.longitude),sa=sun(new Date(x.net),lat,lon),b=bear(lat,lon,+x.pad.latitude,+x.pad.longitude);return{x,k,sa,b,s:score(k,sa)}}).sort((a,b)=>b.s-a.s||new Date(a.x.net)-new Date(b.x.net));
 if(!f.length)throw 0;let a=f.find(x=>x.s>=2)||f[0],w=await wx(lat,lon,new Date(a.x.net).getTime()),mi=Math.round(a.k*.621371);
 document.getElementById('name').textContent=a.x.name;document.getElementById('time').textContent=new Date(a.x.net).toLocaleString([],{dateStyle:'medium',timeStyle:'short'});
-let strong=a.s>=6,possible=a.s>=2,v=document.getElementById('verdict');v.className='big '+(strong?'good':possible?'warn':'bad');v.textContent=strong?'🟢 STRONG CANDIDATE':possible?'🟡 POSSIBLE SIGHTING':'🌙 NOTHING PROMISING RIGHT NOW';
-document.getElementById('distance').textContent=mi.toLocaleString()+' mi';document.getElementById('look').textContent=card(a.b)+' · '+Math.round(a.b)+'°';document.getElementById('sky').textContent=sky(a.sa);document.getElementById('weather').textContent=w?Math.round(w.c)+'% clouds':'Forecast not available yet';
-document.getElementById('why').textContent=possible?`This is the best currently scorable viewing candidate for ${label}. Direction is toward the launch site; actual ascent trajectory may differ.`:`We checked the upcoming launches with usable pad coordinates, but none scored as a strong viewing candidate. This is the best current long-shot.`;
+let promising=a.s>=2,v=document.getElementById('verdict');
+v.className='big '+(promising?'warn':'bad');
+v.textContent=promising?'🟡 POTENTIAL CANDIDATE':'🌙 NOTHING PROMISING RIGHT NOW';
+document.getElementById('distance').textContent=mi.toLocaleString()+' mi';document.getElementById('look').textContent=card(a.b)+' · '+Math.round(a.b)+'°';document.getElementById('sky').textContent=sky(a.sa);document.getElementById('weather').textContent=w?Math.round(w.c)+'% clouds':'Outside forecast range';
+document.getElementById('why').textContent=promising
+? `This is the best currently scorable candidate for ${label}, but visibility is NOT verified. LOOK UP does not yet know the mission-specific ascent trajectory. The direction shown points toward the launch site, not the rocket's path across your sky.`
+: `We checked upcoming launches with usable pad coordinates, but none look promising from distance and sky conditions alone. Trajectory is not yet verified.`;
 document.getElementById('watch').innerHTML=f.slice(0,5).map((q,i)=>`<div class="item"><b>#${i+1} ${q.x.name}</b><div class="muted">${new Date(q.x.net).toLocaleString([],{dateStyle:'medium',timeStyle:'short'})} · ${Math.round(q.k*.621371).toLocaleString()} mi · ${card(q.b)} · ${sky(q.sa)}</div></div>`).join('');
 }catch(e){document.getElementById('why').textContent='Could not retrieve usable upcoming launch data. LOOK UP did not fabricate a prediction.'}}
 </script></body></html>
