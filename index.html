@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>LOOK UP — Can I See the Launch?</title><meta name="description" content="Find rocket launches worth watching from your location.">
+<title>LOOK UP — Can I See the Launch?</title><meta name="description" content="Can you see a rocket launch? Check upcoming launch candidates, viewing direction, local sky conditions, and a Phoenix viewing guide.">
 <style>
 :root{--bg:#050a18;--card:#0c1426;--line:#293650;--text:#f6f8fc;--muted:#8e9ab1;--blue:#38bdf8;--green:#86efac;--yellow:#fde047;--red:#fca5a5}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 20% 0,#10203d,#050a18 40%);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,sans-serif}
@@ -9,7 +9,12 @@ button{padding:15px 18px;border:0;border-radius:12px;font-weight:900;background:
 .card{background:#0c1426e8;border:1px solid var(--line);border-radius:20px;padding:22px;margin:16px 0}.big{font-size:28px;font-weight:900;margin:7px 0}.muted{color:var(--muted);line-height:1.5}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:16px}.stat{background:#08101f;border:1px solid var(--line);border-radius:13px;padding:13px}.stat b{display:block;margin-top:5px}
 .good{color:var(--green)}.warn{color:var(--yellow)}.bad{color:var(--red)}.watch{display:grid;gap:9px}.item{background:#08101f;border:1px solid var(--line);border-radius:13px;padding:14px}
 footer{font-size:12px;color:#738198;line-height:1.5}@media(max-width:700px){.stats{grid-template-columns:1fr 1fr}}
-</style></head><body><header><div>LOOK UP</div><div class="beta">PUBLIC BETA · 0.9 RC</div>
+
+a{color:#7dd3fc;text-underline-offset:3px}a:hover{color:white}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--yellow);outline-offset:4px}
+nav{display:flex;gap:18px;flex-wrap:wrap;margin-top:20px;font-size:14px}.guide-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.guide-grid h3{margin:0 0 8px}.guide-grid p{margin:0}.guide-grid .item{padding:18px}.section-intro{max-width:720px}.photo-layout{display:grid;grid-template-columns:minmax(200px,.8fr) 1.2fr;gap:26px;align-items:center}.photo-layout figure{margin:0}.photo-layout img{width:100%;max-height:480px;object-fit:contain;background:#050a18;border-radius:13px;display:block}.caption{font-size:12px;line-height:1.6;color:#bac5d7;margin-top:9px}.small{font-size:13px;line-height:1.6}.action-link{display:inline-block;padding:12px 15px;border:1px solid var(--line);border-radius:10px;margin-top:12px;text-decoration:none}details{margin-top:16px}summary{cursor:pointer;font-weight:700;padding:8px 0}[hidden]{display:none!important}h2{letter-spacing:-.025em}#feedStatus{min-height:20px}html{scroll-behavior:smooth}
+@media(max-width:700px){.guide-grid,.photo-layout{grid-template-columns:1fr}.photo-layout img{max-height:420px}.big{overflow-wrap:anywhere}main,header,footer{padding:20px}.card{padding:18px}.hero{padding-top:35px}nav{gap:14px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style></head><body><header><div>LOOK UP</div><div class="beta">PUBLIC BETA · 0.10</div>
 <!-- Cloudflare Web Analytics -->
 <script
   defer
@@ -21,7 +26,8 @@ footer{font-size:12px;color:#738198;line-height:1.5}@media(max-width:700px){.sta
 <section class="hero"><div class="eyebrow">LOCATION-AWARE LAUNCH SPOTTING</div><h1>What's worth looking up for?</h1>
 <p>LOOK UP scans upcoming rocket launches and ranks the ones that may actually be worth watching from where you are—instead of simply showing the next rocket leaving Earth.</p>
 <button onclick="useLocation()">📍 Use My Location</button><button class="secondary" onclick="run(33.4484,-112.074,'Phoenix demo')">Try Phoenix demo</button><button class="secondary" onclick="shareSite()">Share LOOK UP</button>
-<p class="muted" style="font-size:12px">Your browser location stays on this page. LOOK UP does not save it.</p></section>
+<p class="muted" style="font-size:12px">Your browser location stays on this page. LOOK UP does not save it.</p><nav aria-label="Viewing guides"><a href="#viewing-guide">Where to watch</a><a href="#jellyfish">What might I see?</a></nav></section>
+<p id="feedStatus" class="muted small" role="status" aria-live="polite">Launch times will include your device’s time zone.</p>
 <section class="card"><div class="label">NEXT LAUNCH WORTH WATCHING</div><div id="name" class="big">Waiting for your location</div><div id="time" class="muted">—</div>
 <div id="verdict" class="big">—</div><div id="why" class="muted">Use your location to rank upcoming launches.</div>
 <div class="item" style="margin-top:14px">
@@ -37,6 +43,30 @@ footer{font-size:12px;color:#738198;line-height:1.5}@media(max-width:700px){.sta
 <div id="nextChronNote" class="muted">This shows the next launch even if LOOK UP cannot score it yet.</div>
 </section>
 <section class="card"><div class="label">YOUR LAUNCH WATCHLIST</div><h2>Best upcoming candidates</h2><div id="watch" class="watch"><div class="item muted">Run a location check first.</div></div></section>
+
+<section class="card" id="viewing-guide" aria-labelledby="guide-heading">
+<div class="label">MAKE A VIEWING PLAN</div><h2 id="guide-heading">Where should I watch?</h2>
+<p class="muted section-intro">Start with a place you know, with a wide, unobstructed horizon. A nearby open view can be more useful than a long drive to a lookout.</p>
+<div class="guide-grid">
+<div class="item"><h3>Which direction?</h3><p id="viewDirection" class="muted">Run a location check to see the bearing toward the selected launch site.</p></div>
+<div class="item"><h3>When to get ready</h3><p id="viewTiming" class="muted">Confirm the latest launch schedule before heading out. Be ready around 10 minutes before the target time, and follow the live countdown for delays.</p></div>
+<div class="item"><h3>Choose your spot</h3><p class="muted">Look for a clear horizon in the indicated direction, away from buildings, ridges, and bright lights. Check parking, access hours, and the weather before leaving.</p></div>
+<div class="item"><h3>What to look for</h3><p class="muted">A distant launch may appear as a moving bright point, a thin trail, or an expanding plume. The rocket may only become visible after it climbs; the exact path is not yet modeled here.</p></div>
+</div>
+<div id="phoenixGuide" hidden>
+<h3>Watching from the Phoenix area</h3><p class="muted" id="phoenixContext"></p>
+<div class="item"><b>Dobbins Lookout / South Mountain</b><p class="muted">A place to investigate for its panoramic views. The City lists vehicle entrance and parking hours as 5 a.m.–7 p.m.; trail hours differ. Check road closures and current access before planning an evening visit. This is not a verified launch viewing location.</p><a href="https://www.phoenix.gov/administration/departments/parks/activities-facilities/trails/south-mountain-parkpreserve.html" target="_blank" rel="noopener noreferrer">Check official park hours and closures ↗</a></div>
+<p class="muted small">A lookout’s elevation alone does not establish visibility. Check the horizon in the launch-site direction from your exact spot.</p>
+</div>
+<p class="muted small">The bearing points toward the pad, not the rocket’s predicted position. A viewing plan is not a visibility guarantee.</p>
+</section>
+<section class="card" id="jellyfish" aria-labelledby="photo-heading">
+<div class="label">WHAT A LAUNCH CAN LOOK LIKE</div><h2 id="photo-heading">The Falcon “jellyfish”</h2>
+<div class="photo-layout"><figure><a href="assets/falcon-jellyfish.jpg" target="_blank" rel="noopener noreferrer" aria-label="Open full jellyfish launch photo"><img src="assets/falcon-jellyfish.jpg" width="683" height="1024" loading="lazy" alt="Sunlit Falcon 9 exhaust spreading into a glowing jellyfish-shaped plume against the predawn sky."></a><figcaption class="caption">Falcon 9 / CRS-35, Florida, October 13, 2026.<br>Photo: NASA/John Kraus. <a href="https://www.nasa.gov/image-article/nasas-space-x-crs-35-launch-jellyfish/" target="_blank" rel="noopener noreferrer">Original photo and context ↗</a></figcaption></figure>
+<div><h3>A little sunlight, high above a dark sky</h3><p class="muted">Around dawn or dusk, sunlight can reach the rocket’s high-altitude exhaust while the ground below is dark. The spreading plume can glow like a jellyfish.</p><p class="muted">This is an example from a past Florida launch. It does not show what the selected mission will look like from your location.</p><p id="plumeContext" class="item muted">Choose a location to see its expected sky conditions at launch time. Local darkness alone does not predict a sunlit plume.</p>
+<details><summary>Taking your first launch photo</summary><p class="muted">Start with your phone’s normal camera and a wide view. Brace the phone or use a tripod, avoid digital zoom, and try a few exposures. Long night-mode exposures may blur a moving rocket.</p></details></div></div>
+</section>
+
 </main><footer>LOOK UP public beta. Candidate rankings are experimental and do not confirm that a rocket will be visible. Direction currently points toward the launch site, not a verified rocket flight path. Always check official launch information before making travel plans.</footer>
 <script>
 async function shareSite(){
@@ -47,6 +77,16 @@ async function shareSite(){
  }catch(e){}
 }
 
+function fmtTime(value){return new Date(value).toLocaleString([],{year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'})}
+function esc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function updateGuide(a,lat,lon,label){
+ document.getElementById('viewDirection').textContent=`From ${label}, the launch site is ${card(a.b)} (${Math.round(a.b)}° on a compass). Choose an open horizon in that direction. The rocket may travel elsewhere in the sky.`;
+ document.getElementById('viewTiming').textContent=`Target: ${fmtTime(a.x.net)}. Aim to be ready by ${fmtTime(new Date(new Date(a.x.net).getTime()-10*60000))}. Recheck the provider’s countdown before leaving; the target can change.`;
+ const nearPhoenix=dist(lat,lon,33.4484,-112.074)<100;
+ document.getElementById('phoenixGuide').hidden=!nearPhoenix;
+ document.getElementById('phoenixContext').textContent=`For this candidate, look for an open ${card(a.b)} horizon toward the launch site. These notes are for the Phoenix area; they do not verify visibility from a particular park.`;
+ document.getElementById('plumeContext').textContent=`Your expected sky at the target time: ${sky(a.sa).toLowerCase()}. LOOK UP does not yet calculate whether this mission’s high-altitude plume will be sunlit.`;
+}
 const R=6371,rad=x=>x*Math.PI/180,deg=x=>x*180/Math.PI;
 function dist(a,b,c,d){let x=rad(c-a),y=rad(d-b),q=Math.sin(x/2)**2+Math.cos(rad(a))*Math.cos(rad(c))*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(q))}
 function bear(a,b,c,d){let p=rad(a),q=rad(c),x=rad(d-b),y=Math.sin(x)*Math.cos(q),z=Math.cos(p)*Math.sin(q)-Math.sin(p)*Math.cos(q)*Math.cos(x);return(deg(Math.atan2(y,z))+360)%360}
@@ -55,26 +95,29 @@ function sun(date,lat,lon){let jd=date.getTime()/86400000+2440587.5,n=jd-2451545
 function sky(a){return a>0?'Daylight':a>-6?'Civil twilight':a>-12?'Nautical twilight':a>-18?'Astronomical twilight':'Dark'}
 function score(km,sa){let s=km<200?5:km<500?4:km<1000?2:km<1600?0:-4;s+=sa<-12?4:sa<-6?3:sa<0?1:sa>10?-3:0;return s}
 async function wx(lat,lon,d){if((d-Date.now())/36e5>384)return null;try{let u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=cloud_cover,precipitation_probability&forecast_days=16&timezone=UTC`,j=await(await fetch(u)).json(),t=j.hourly.time.map(x=>new Date(x+'Z').getTime()),i=t.reduce((a,x,k)=>Math.abs(x-d)<Math.abs(t[a]-d)?k:a,0);let c=Number(j.hourly.cloud_cover[i]),p=Number(j.hourly.precipitation_probability[i]);let ws=(c<=20?3:c<=50?1:c<=79?-1:-4)+(p>=70?-3:p>=40?-1:0);let label=c>=80?'Poor · '+Math.round(c)+'% clouds':c>=50?'Marginal · '+Math.round(c)+'% clouds':c<=20?'Good · '+Math.round(c)+'% clouds':'Fair · '+Math.round(c)+'% clouds';return{c,p,ws,label}}catch(e){return null}}
-function useLocation(){navigator.geolocation.getCurrentPosition(p=>run(p.coords.latitude,p.coords.longitude,'your location'),()=>document.getElementById('why').textContent='Location permission was not available.')}
-async function run(lat,lon,label){document.getElementById('why').textContent='Scanning upcoming launches…';try{
-let u='https://ll.thespacedevs.com/2.3.0/launches/upcoming/?format=json&limit=100&ordering=net&hide_recent_previous=true',j=await(await fetch(u,{cache:'no-store'})).json(),now=Date.now();
+function weatherLabel(w,when){return w?w.label:when-Date.now()>384*36e5?'Outside forecast range':'Forecast unavailable'}
+function useLocation(){if(!navigator.geolocation){document.getElementById('why').textContent='Location is unavailable in this browser. Try the Phoenix demo.';return}navigator.geolocation.getCurrentPosition(p=>run(p.coords.latitude,p.coords.longitude,'your location'),()=>document.getElementById('why').textContent='Location permission was not available.')}
+let requestNumber=0;
+async function run(lat,lon,label){const request=++requestNumber;document.getElementById('feedStatus').textContent='Checking the launch feed…';document.getElementById('phoenixGuide').hidden=true;document.getElementById('viewDirection').textContent='Updating viewing direction…';document.getElementById('why').textContent='Scanning upcoming launches…';try{
+let u='https://ll.thespacedevs.com/2.3.0/launches/upcoming/?format=json&limit=100&ordering=net&hide_recent_previous=true',j=await(await fetch(u,{cache:'no-store'})).json(),now=Date.now();if(request!==requestNumber)return;
 let allFuture=(j.results||[]).filter(x=>x.net&&new Date(x.net)>now).sort((a,b)=>new Date(a.net)-new Date(b.net));
+document.getElementById('feedStatus').textContent=`Launch feed retrieved ${fmtTime(now)} · Source: The Space Devs / Launch Library 2 · Schedules may change.`;
 let chron=allFuture[0];
 if(chron){
   document.getElementById('nextChronName').textContent=chron.name||'Upcoming launch';
-  document.getElementById('nextChronTime').textContent=new Date(chron.net).toLocaleString([],{dateStyle:'medium',timeStyle:'short'});
+  document.getElementById('nextChronTime').textContent=fmtTime(chron.net);
   document.getElementById('nextChronNote').textContent=(chron.pad?.latitude!=null&&chron.pad?.longitude!=null)
     ? 'This launch has usable pad coordinates and can be ranked.'
     : 'LOOK UP cannot rank this launch yet because usable launch-pad coordinates are missing.';
 }
 let f=allFuture.filter(x=>x.pad?.latitude!=null&&x.pad?.longitude!=null).map(x=>{let k=dist(lat,lon,+x.pad.latitude,+x.pad.longitude),sa=sun(new Date(x.net),lat,lon),b=bear(lat,lon,+x.pad.latitude,+x.pad.longitude);return{x,k,sa,b,s:score(k,sa)}}).sort((a,b)=>b.s-a.s||new Date(a.x.net)-new Date(b.x.net));
-if(!f.length)throw 0;let pool=f.slice(0,8);for(let q of pool){q.w=await wx(lat,lon,new Date(q.x.net).getTime());q.total=q.s+(q.w?q.w.ws:0)}pool.sort((a,b)=>b.total-a.total||new Date(a.x.net)-new Date(b.x.net));let a=pool.find(x=>x.total>=2)||pool[0],w=a.w,mi=Math.round(a.k*.621371);
-document.getElementById('name').textContent=a.x.name;document.getElementById('time').textContent=new Date(a.x.net).toLocaleString([],{dateStyle:'medium',timeStyle:'short'});
+if(!f.length)throw 0;let pool=f.slice(0,8);for(let q of pool){q.w=await wx(lat,lon,new Date(q.x.net).getTime());q.total=q.s+(q.w?q.w.ws:0)}if(request!==requestNumber)return;pool.sort((a,b)=>b.total-a.total||new Date(a.x.net)-new Date(b.x.net));let a=pool.find(x=>x.total>=2)||pool[0],w=a.w,mi=Math.round(a.k*.621371);
+updateGuide(a,lat,lon,label);document.getElementById('name').textContent=a.x.name;document.getElementById('time').textContent=fmtTime(a.x.net);
 let total=(a.total??a.s),poorWeather=w&&w.c>=80;let promising=total>=2&&!poorWeather,v=document.getElementById('verdict');
 v.className='big '+(promising?'warn':'bad');
 v.textContent=poorWeather?'☁️ POOR VIEWING CONDITIONS':promising?'🟡 POTENTIAL CANDIDATE':'🌙 NOTHING PROMISING RIGHT NOW';
-document.getElementById('distance').textContent=mi.toLocaleString()+' mi';document.getElementById('look').textContent=card(a.b)+' · '+Math.round(a.b)+'°';document.getElementById('sky').textContent=sky(a.sa);document.getElementById('weather').textContent=w?w.label:'Outside forecast range';
+document.getElementById('distance').textContent=mi.toLocaleString()+' mi';document.getElementById('look').textContent=card(a.b)+' · '+Math.round(a.b)+'°';document.getElementById('sky').textContent=sky(a.sa);document.getElementById('weather').textContent=weatherLabel(w,new Date(a.x.net).getTime());
 document.getElementById('why').textContent=poorWeather?`This launch is geographically interesting for ${label}, but the available forecast is heavily clouded, so LOOK UP downgraded it. Visibility is not verified and trajectory is not yet known.`:promising?`This is the best currently scorable candidate for ${label} after distance, sky and available weather are considered. Visibility is NOT verified. Direction points toward the launch site, not the rocket's exact flight path.`:`We checked upcoming launches with usable pad coordinates and available weather, but none currently look promising. Trajectory is not yet verified.`;
-document.getElementById('watch').innerHTML=pool.slice(0,5).map((q,i)=>`<div class="item"><b>#${i+1} ${q.x.name}</b><div class="muted">${new Date(q.x.net).toLocaleString([],{dateStyle:'medium',timeStyle:'short'})} · ${Math.round(q.k*.621371).toLocaleString()} mi · ${card(q.b)} · ${sky(q.sa)} · ${q.w?q.w.label:'weather outside forecast range'}</div></div>`).join('');
-}catch(e){document.getElementById('why').textContent='Could not retrieve usable upcoming launch data. LOOK UP did not fabricate a prediction.'}}
+document.getElementById('watch').innerHTML=pool.slice(0,5).map((q,i)=>`<div class="item"><b>#${i+1} ${esc(q.x.name)}</b><div class="muted">${fmtTime(q.x.net)} · ${Math.round(q.k*.621371).toLocaleString()} mi · ${card(q.b)} · ${sky(q.sa)} · ${weatherLabel(q.w,new Date(q.x.net).getTime())}</div></div>`).join('');
+}catch(e){if(request!==requestNumber)return;document.getElementById('feedStatus').textContent='Launch feed unavailable. Try again shortly.';document.getElementById('viewDirection').textContent='No current viewing direction is available. Try another location check.';document.getElementById('viewTiming').textContent='Confirm the latest launch schedule before heading out.';document.getElementById('plumeContext').textContent='No current sky estimate is available.';for(const id of ['name','time','verdict','distance','look','sky','weather','nextChronName','nextChronTime'])document.getElementById(id).textContent='—';document.getElementById('watch').textContent='No current launch data.';document.getElementById('why').textContent='Could not retrieve usable upcoming launch data. LOOK UP did not fabricate a prediction.'}}
 </script></body></html>
