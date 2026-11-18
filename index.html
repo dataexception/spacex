@@ -14,7 +14,7 @@ a{color:#7dd3fc;text-underline-offset:3px}a:hover{color:white}button:focus-visib
 nav{display:flex;gap:18px;flex-wrap:wrap;margin-top:20px;font-size:14px}.guide-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.guide-grid h3{margin:0 0 8px}.guide-grid p{margin:0}.guide-grid .item{padding:18px}.section-intro{max-width:720px}.photo-layout{display:grid;grid-template-columns:minmax(200px,.8fr) 1.2fr;gap:26px;align-items:center}.photo-layout figure{margin:0}.photo-layout img{width:100%;max-height:480px;object-fit:contain;background:#050a18;border-radius:13px;display:block}.caption{font-size:12px;line-height:1.6;color:#bac5d7;margin-top:9px}.small{font-size:13px;line-height:1.6}.action-link{display:inline-block;padding:12px 15px;border:1px solid var(--line);border-radius:10px;margin-top:12px;text-decoration:none}details{margin-top:16px}summary{cursor:pointer;font-weight:700;padding:8px 0}[hidden]{display:none!important}h2{letter-spacing:-.025em}#feedStatus{min-height:20px}html{scroll-behavior:smooth}
 @media(max-width:700px){.guide-grid,.photo-layout{grid-template-columns:1fr}.photo-layout img{max-height:420px}.big{overflow-wrap:anywhere}main,header,footer{padding:20px}.card{padding:18px}.hero{padding-top:35px}nav{gap:14px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
-</style></head><body><header><div>LOOK UP</div><div class="beta">PUBLIC BETA · 0.10</div>
+</style></head><body><header><div>LOOK UP</div><div class="beta">PUBLIC BETA · 0.10.1</div>
 <!-- Cloudflare Web Analytics -->
 <script
   defer
@@ -94,12 +94,41 @@ function card(b){return['N','NE','E','SE','S','SW','W','NW'][Math.round(b/45)%8]
 function sun(date,lat,lon){let jd=date.getTime()/86400000+2440587.5,n=jd-2451545,L=(280.46+.9856474*n)%360,g=rad((357.528+.9856003*n)%360),la=rad((L+1.915*Math.sin(g)+.02*Math.sin(2*g))%360),e=rad(23.439-.0000004*n),ra=Math.atan2(Math.cos(e)*Math.sin(la),Math.cos(la)),dc=Math.asin(Math.sin(e)*Math.sin(la)),gm=(18.697374558+24.06570982441908*n)%24,H=rad((gm*15+lon)%360)-ra;return deg(Math.asin(Math.sin(rad(lat))*Math.sin(dc)+Math.cos(rad(lat))*Math.cos(dc)*Math.cos(H)))}
 function sky(a){return a>0?'Daylight':a>-6?'Civil twilight':a>-12?'Nautical twilight':a>-18?'Astronomical twilight':'Dark'}
 function score(km,sa){let s=km<200?5:km<500?4:km<1000?2:km<1600?0:-4;s+=sa<-12?4:sa<-6?3:sa<0?1:sa>10?-3:0;return s}
-async function wx(lat,lon,d){if((d-Date.now())/36e5>384)return null;try{let u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=cloud_cover,precipitation_probability&forecast_days=16&timezone=UTC`,j=await(await fetch(u)).json(),t=j.hourly.time.map(x=>new Date(x+'Z').getTime()),i=t.reduce((a,x,k)=>Math.abs(x-d)<Math.abs(t[a]-d)?k:a,0);let c=Number(j.hourly.cloud_cover[i]),p=Number(j.hourly.precipitation_probability[i]);let ws=(c<=20?3:c<=50?1:c<=79?-1:-4)+(p>=70?-3:p>=40?-1:0);let label=c>=80?'Poor · '+Math.round(c)+'% clouds':c>=50?'Marginal · '+Math.round(c)+'% clouds':c<=20?'Good · '+Math.round(c)+'% clouds':'Fair · '+Math.round(c)+'% clouds';return{c,p,ws,label}}catch(e){return null}}
+async function fetchJSON(url,options={},timeout=10000){
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeout);
+ try{const response=await fetch(url,{...options,signal:controller.signal});if(!response.ok)throw new Error('Request failed');return await response.json()}finally{clearTimeout(timer)}
+}
+async function forecast(lat,lon){
+ try{return await fetchJSON(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=cloud_cover,precipitation_probability&forecast_days=16&timezone=UTC`,{},8000)}catch(e){return null}
+}
+function wx(d,j){
+ if((d-Date.now())/36e5>384||!j?.hourly?.time?.length)return null;
+ const t=j.hourly.time.map(x=>new Date(x+'Z').getTime());
+ const i=t.reduce((a,x,k)=>Math.abs(x-d)<Math.abs(t[a]-d)?k:a,0);
+ if(Math.abs(t[i]-d)>90*60000)return null;
+ const rawC=j.hourly.cloud_cover?.[i],rawP=j.hourly.precipitation_probability?.[i];
+ if(rawC==null||rawP==null)return null;
+ const c=Number(rawC),p=Number(rawP);if(!Number.isFinite(c)||!Number.isFinite(p))return null;
+ const ws=(c<=20?3:c<=50?1:c<=79?-1:-4)+(p>=70?-3:p>=40?-1:0);
+ const label=c>=80?'Poor · '+Math.round(c)+'% clouds':c>=50?'Marginal · '+Math.round(c)+'% clouds':c<=20?'Good · '+Math.round(c)+'% clouds':'Fair · '+Math.round(c)+'% clouds';
+ return{c,p,ws,label}
+}
 function weatherLabel(w,when){return w?w.label:when-Date.now()>384*36e5?'Outside forecast range':'Forecast unavailable'}
-function useLocation(){if(!navigator.geolocation){document.getElementById('why').textContent='Location is unavailable in this browser. Try the Phoenix demo.';return}navigator.geolocation.getCurrentPosition(p=>run(p.coords.latitude,p.coords.longitude,'your location'),()=>document.getElementById('why').textContent='Location permission was not available.')}
+function useLocation(){
+ const status=document.getElementById('feedStatus');
+ if(!navigator.geolocation){status.textContent='Location is unavailable in this browser. Try the Phoenix demo.';return}
+ const request=++requestNumber;
+ status.textContent='Finding your location…';
+ document.getElementById('why').textContent='Waiting for your browser’s location. Allow access if prompted.';
+ navigator.geolocation.getCurrentPosition(
+  p=>{if(request===requestNumber)run(p.coords.latitude,p.coords.longitude,'your location')},
+  e=>{if(request!==requestNumber)return;status.textContent=e.code===3?'Location took too long. Try again or use the Phoenix demo.':'Location was unavailable. Check browser permission or use the Phoenix demo.';document.getElementById('why').textContent='Choose a location to refresh the launch results.'},
+  {enableHighAccuracy:false,timeout:10000,maximumAge:300000}
+ );
+}
 let requestNumber=0;
 async function run(lat,lon,label){const request=++requestNumber;document.getElementById('feedStatus').textContent='Checking the launch feed…';document.getElementById('phoenixGuide').hidden=true;document.getElementById('viewDirection').textContent='Updating viewing direction…';document.getElementById('why').textContent='Scanning upcoming launches…';try{
-let u='https://ll.thespacedevs.com/2.3.0/launches/upcoming/?format=json&limit=100&ordering=net&hide_recent_previous=true',j=await(await fetch(u,{cache:'no-store'})).json(),now=Date.now();if(request!==requestNumber)return;
+let u='https://ll.thespacedevs.com/2.3.0/launches/upcoming/?format=json&limit=100&ordering=net&hide_recent_previous=true',j=await fetchJSON(u,{cache:'no-store'},15000),now=Date.now();if(request!==requestNumber)return;
 let allFuture=(j.results||[]).filter(x=>x.net&&new Date(x.net)>now).sort((a,b)=>new Date(a.net)-new Date(b.net));
 document.getElementById('feedStatus').textContent=`Launch feed retrieved ${fmtTime(now)} · Source: The Space Devs / Launch Library 2 · Schedules may change.`;
 let chron=allFuture[0];
@@ -111,7 +140,11 @@ if(chron){
     : 'LOOK UP cannot rank this launch yet because usable launch-pad coordinates are missing.';
 }
 let f=allFuture.filter(x=>x.pad?.latitude!=null&&x.pad?.longitude!=null).map(x=>{let k=dist(lat,lon,+x.pad.latitude,+x.pad.longitude),sa=sun(new Date(x.net),lat,lon),b=bear(lat,lon,+x.pad.latitude,+x.pad.longitude);return{x,k,sa,b,s:score(k,sa)}}).sort((a,b)=>b.s-a.s||new Date(a.x.net)-new Date(b.x.net));
-if(!f.length)throw 0;let pool=f.slice(0,8);for(let q of pool){q.w=await wx(lat,lon,new Date(q.x.net).getTime());q.total=q.s+(q.w?q.w.ws:0)}if(request!==requestNumber)return;pool.sort((a,b)=>b.total-a.total||new Date(a.x.net)-new Date(b.x.net));let a=pool.find(x=>x.total>=2)||pool[0],w=a.w,mi=Math.round(a.k*.621371);
+if(!f.length)throw 0;let pool=f.slice(0,8);
+ document.getElementById('why').textContent='Launches found. Checking one shared weather forecast…';
+ const weatherData=pool.some(q=>new Date(q.x.net).getTime()-Date.now()<=384*36e5)?await forecast(lat,lon):null;
+ if(request!==requestNumber)return;
+ for(const q of pool){q.w=wx(new Date(q.x.net).getTime(),weatherData);q.total=q.s+(q.w?q.w.ws:0)}if(request!==requestNumber)return;pool.sort((a,b)=>b.total-a.total||new Date(a.x.net)-new Date(b.x.net));let a=pool.find(x=>x.total>=2)||pool[0],w=a.w,mi=Math.round(a.k*.621371);
 updateGuide(a,lat,lon,label);document.getElementById('name').textContent=a.x.name;document.getElementById('time').textContent=fmtTime(a.x.net);
 let total=(a.total??a.s),poorWeather=w&&w.c>=80;let promising=total>=2&&!poorWeather,v=document.getElementById('verdict');
 v.className='big '+(promising?'warn':'bad');
